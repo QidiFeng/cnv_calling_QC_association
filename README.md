@@ -6,9 +6,9 @@
 5. Please keep all codes in ./code directory and conduct commands under ./code directory. 
 
 
-# Part1: PennCNV and iPattern input preparation######
+# Part1: PennCNV and iPattern input preparation
 
-`perl 01_01_signalDensity_samplelist.pl $cohort_name $finalreport $phenofile $penndir $ipndir`
+1. `perl 01_01_signalDensity_samplelist.pl $cohort_name $finalreport $phenofile $penndir $ipndir`
 
 notice: This command process one cohort each time. If you have several cohorts, please repeatedly use this command to produce inputs for all cohorts. Please use full directories for penncnv\_input\_dir and ipn\_input\_dir. This script will produce signalfiles for penncnv under $penndir/$cohort/data, and snplist.txt, samplelist under $penndir/$cohort/data\_aux; Also it will produce all files needed for ipn under $ipndir/$cohort/data and $ipndir/$cohort/data\_aux
 
@@ -31,7 +31,7 @@ notice: This script will produce gcmodel for Penncnv. cal\_gc\_snp.pl script is 
 example: `perl /home/fengqidi/software/PennCNV-1.0.5/cal_gc_snp.pl gc5Base.txt snplist.txt -output gcmodel`
 
 
-# Part2: Running PennCNV and iPattern######
+# Part2: Running PennCNV and iPattern
 
 ## running iPattern
 1. `cd $ipn_package_dir/ipn_0.582/preprocess/ilmn/`
@@ -47,7 +47,7 @@ example: `bash ilmn.sh /mnt/disks/sdb/1_sc_asia/pipeline/03_for_github/ipn/Ma_xa
 example: `perl /home/fengqidi/software/PennCNV-1.0.5/detect_cnv.pl -test -hmm /home/fengqidi/software/PennCNV-1.0.5/lib/hhall.hmm -pfb pfbfile -gcmodel gcmodel -listfile samplelist -confidence -log ../out/sample.log -out ../out/sample.rawcnv`
 
 
-# Part3: Intersection of Raw CNV (PennCNV and iPattern) and QC######
+# Part3: Intersection of Raw CNV (PennCNV and iPattern) and QC
 
 1. `bash 02_0_CNVcombine_QC.sh $ipn_dir $penn_dir $out_dir $cohort_list $chromosome_length $phenofile $exon_gene_list $centromere_telomere`
 
@@ -57,6 +57,6 @@ Please use the same $ipn\_dir and $penn\_dir as before in the first part. $chrom
 example: `bash 02_0_CNVcombine_QC.sh /mnt/disks/sdb/1_sc_asia/pipeline/03_for_github/ /mnt/disks/sdb/1_sc_asia/pipeline/03_for_github/ ./QC_ed`
 
 
-# Part4: CNVburden calculation######
+# Part4: CNVburden calculation
 `Rscript 03_1_cnvburden.r $working_dir $out_dir/02_11_plinked $gene_file $output $phenofile`
 
