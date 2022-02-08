@@ -1,5 +1,7 @@
 # Prerequisite
-1. iPattern and PennCNV installed.
+1. iPattern and PennCNV installed. Pls find iPattern under ./software. 
+   PennCNV download page: http://penncnv.openbioinformatics.org/en/latest/user-guide/download/
+   iPattern installation tips: 1. Set Python2 as default; 2. install Ghostscript, which is needed for bitmap function;    3. install ppc R package from  http://www-stat.stanford.edu/~tibs/PPC/Rdist/index.html.
 2. Finalreport file. Finalreport format has a header which contains "SNP Name", "Sample ID", "Allele1 - Forward", "Allele2 - Forward", "Chr", "Position", "X", "Y", "B Allele Freq" and "Log R Ratio"; And they were seperated by tab. 
 3. Phenofile. $phenofile should contain FID, IID, AFF, SEX, ancestry, CNV\_platform, C1, C2, C3, C4, C5 columns.Please use "cohort\*sampleid" as FID and IID. FID could be the same with IID.DO NOT use "\*" or "-" within cohort names or sampleid (please replace "\*" or "-" with "\_").
 4. Cohortlist. One cohort name each line. Cohort name should be consistent with cohort name in $phenofile.
