@@ -1,5 +1,5 @@
 # Prerequisite
-1. iPattern and PennCNV installed. Pls find iPattern under ./software. 
+1. Plink-1.07-x86\_64 installed.iPattern and PennCNV installed. Pls find iPattern under ./software. 
    PennCNV download page: http://penncnv.openbioinformatics.org/en/latest/user-guide/download/
    iPattern installation tips: 1. Set Python2 as default; 2. install Ghostscript, which is needed for bitmap function;    3. install ppc R package from  http://www-stat.stanford.edu/~tibs/PPC/Rdist/index.html.
 2. Finalreport file. Finalreport format has a header which contains "SNP Name", "Sample ID", "Allele1 - Forward", "Allele2 - Forward", "Chr", "Position", "X", "Y", "B Allele Freq" and "Log R Ratio"; And they were seperated by tab. 
