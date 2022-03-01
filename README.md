@@ -63,5 +63,6 @@ example: `bash 02_0_CNVcombine_QC.sh /mnt/disks/sdb/1_sc_asia/pipeline/03_for_gi
 
 
 # Part4: CNVburden calculation
-`Rscript 03_1_cnvburden.r $working_dir $out_dir/02_11_plinked $gene_file $output $phenofile`
+`Rscript 03_1_cnvburden.r $working_dir $out_dir/02_11_plinked $gene_file $phenofile`
+example: `Rscript 03_1_cnvburden.r ./cnvburden ./output/02_11_plinked ./supp_files/ensemble_exon_genelist.plink.txt ./cnv_calling_qc_association/example/MA.phe`
 

@@ -1,40 +1,49 @@
 ## read in command line arguments
 args <- commandArgs(TRUE)
-wdir <- args[1]
-input <- args[2]
+wdir <- args[1] 
+input <- args[2] 
 gene_file <- args[3]
-output <- args[4]
-phenofile <- args[5]
+phefile <- args[4] 
+output <- "CNVburden"
+perm <- 100
 
+phe <- read.table(phefile,h=T)
+phe$matchID <- paste(phe$FID,':',phe$IID,sep='')
+phe$aff <- phe$AFF - 1
+
+##get intersection of fam file and phe
+fam <- read.table(paste0(input, ".fam"))
+colnames(fam) <- c("FID", "IID", "Within-family_ID_of_father", "Within-family_ID_of_mother", "sex", "affect")
+fam$matchID <- paste(fam$FID, ':',fam$IID,sep='')
+combined <- merge(fam, phe, by='matchID')
 ## PLINK permutation count (currently ignoring PLINK p-values)
 perm <- 100 
 
 ## change to working directory
 setwd(wdir)
 
-## create temporary subdirectory within working directory (will not overwrite existing directory)
-system('mkdir -p burden_loop')
-
-## read in individual data
-phe <- read.table(phenofile,h=T)
-
 ## dataset - sort by sizes
-dat <- table(phe$CNV_platform)
-data_name <- c('SC_ASIA',names(dat))
+dat <- unique(sort(combined$CNV_platform))
+data_name <- c('combined',as.character(dat))
 
+##set the start of datasets loop
+startpoint=1
+if(length(data_name)==2){
+	startpoint = 2
+}
 ## write out PLINK ID files 
 for (i in 2:length(data_name)) {
-    ID <- phe[phe$CNV_platform==data_name[i],1:2]
-    write.table(ID,paste('burden_loop/',data_name[i],'.ID',sep=''),col=F,row=F,quo=F,sep='\t')
+    ID <- combined[combined$CNV_platform==data_name[i],2:3]
+    write.table(ID,paste(data_name[i],'.ID',sep=''),col=F,row=F,quo=F,sep='\t')
 }
 
 type_name <- c('allCNV','del','dup')
 region_name <- c('allregions','novelregions')
-size_name <- c('Allsize','>100kb','>300kb','>500kb') 
+size_name <- c('>20kb','>100kb','>200kb','>300kb','>400kb','>500kb','>600kb') 
 freq_name <- c('Allfreq','singleton','2-5','6-10','11-20','21-40','41-80','81+')
 
 # CNV burden filters
-data <- c('',paste(' --keep burden_loop/',data_name[2:length(data_name)],'.ID',sep=''))
+data <- c('',paste(' --keep ', wdir,'/',data_name[2:length(data_name)],'.ID',sep=''))
 
 type <- c('',
           '--cnv-del',
@@ -44,8 +53,11 @@ region <- c('','--cnv-exclude hg19_implicated_CNV.txt --cnv-region-overlap 0.01'
 
 size <- c('',
           '--cnv-kb 100',
+          '--cnv-kb 200',
           '--cnv-kb 300',
-          '--cnv-kb 500') 
+          '--cnv-kb 400',
+          '--cnv-kb 500',
+          '--cnv-kb 600') 
 
 freq <- c('',
           '--cnv-freq-method2 0.5 --cnv-freq-exclude-above 1',
@@ -95,15 +107,15 @@ KB_NONGENIC_rate <- NA; KB_NONGENIC_cas_rate <- NA; KB_NONGENIC_con_rate <- NA; 
 
 ## FILTER sets:
 #for(a in 1:1){
-for(a in 1:length(data_name)){
-for(b in 1:length(type_name)){
-#for(b in 1:1){
+for(a in startpoint:length(data_name)){
+#for(b in 1:length(type_name)){
+for(b in 1:1){
 for(c in 1:1){
 for(d in 1:1){
 #for(c in 1:length(region_name)){
 #for(d in 1:length(freq_name)){
-#for(e in 1:1){
-for(e in 1:length(size_name)){
+for(e in 1:1){
+#for(e in 1:length(size_name)){
 ## PART 3: CNV burden loop
 
 ## getting full count of burden analyses
@@ -112,9 +124,9 @@ tot <- length(data_name)*length(type_name)*length(region_name)*length(freq_name)
 
 ## PART 3.1: Setting up burden loop
 
-## adjustments to .phe file for burden testinf
-phe$matchID <- paste(phe$FID,':',phe$IID,sep='')
-phe$aff <- phe$AFF - 1
+## create temporary subdirectory within working directory (will not overwrite existing directory)
+system('mkdir -p burden_loop')
+
 
 ## assign specific loop parameters
 data2 <- data[a]
@@ -167,7 +179,7 @@ cnv <- read.table('burden_loop/size_loop.cnv',h=T)
 
 if (nrow(cnv) > 0) {
   
-## == PLINK result
+## == PLINK results
 plink_sum <- read.table("burden_loop/burden_loop.cnv.grp.summary",h=T)
 plink_emp <- read.table("burden_loop/burden_loop.cnv.summary.mperm",h=T)
 
@@ -216,10 +228,15 @@ indiv$NONGENIC_KB <- replace(indiv$NONGENIC_KB,indx,nongenic.tbl)
 
 ## -- merge with phenotype
 comrg <- merge(indiv,phe,by='matchID')
-comrg_cnv <- comrg[comrg$NSEG > 0,]
-comrg_genic <- comrg[comrg$GENIC_CNV_COUNT > 0,]
-comrg_nongenic <- comrg[comrg$NONGENIC_CNV_COUNT > 0,]
+#comrg_cnv <- comrg[comrg$NSEG > 0,]
+#comrg_genic <- comrg[comrg$GENIC_CNV_COUNT > 0,]
+#comrg_nongenic <- comrg[comrg$NONGENIC_CNV_COUNT > 0,]
+comrg_cnv <- comrg
+comrg_genic <- comrg
+comrg_nongenic <- comrg
 
+#write.table(comrg, paste(sep='',wdir,'/',output,data_set[X],region_set[X],CNV_type[X],CNV_freq[X],CNV_size[X],'.comrg.txt'),col=T,row=F,quo=F,sep='\t')
+#write.table(comrg_cnv, paste(sep='',wdir,'/',output,data_set[X],region_set[X],CNV_type[X],CNV_freq[X],CNV_size[X],'.comrg_cnv.txt'),col=T,row=F,quo=F,sep='\t')
 
 NSEG[X] <- sum(comrg$NSEG)
 NSEG_GENIC[X] <- sum(comrg$GENIC_CNV_COUNT)
@@ -242,8 +259,8 @@ if(sum(comrg_cnv$aff==0)==0 | sum(comrg_cnv$aff==1)==0){
 
 if(sum(comrg_cnv$aff==0) > 0 & sum(comrg_cnv$aff==1) > 0){
 
-if (data_set[X]=='SC_ASIA') { COUNT.lm <- glm(aff ~ COUNT + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg_cnv,family='binomial') }
-if (data_set[X]!='SC_ASIA') { COUNT.lm <- glm(aff ~ COUNT + SEX + C1 + C2 + C3 + C4 + C5,data=comrg_cnv,family='binomial') }
+if (data_set[X]=='combined') { COUNT.lm <- glm(aff ~ COUNT + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg_cnv,family='binomial') }
+if (data_set[X]!='combined') { COUNT.lm <- glm(aff ~ COUNT + SEX + C1 + C2 + C3 + C4 + C5,data=comrg_cnv,family='binomial') }
 
 COUNT.mod <- summary(COUNT.lm)
 COUNT_glm_OR[X] <- exp(COUNT.mod$coefficients[2,1])    
@@ -253,6 +270,32 @@ COUNT_glm_pval[X] <- COUNT.mod$coefficients[2,4]
 COUNT_glm_lowerCI[X] <- exp(COUNT.mod$coefficients[2,1] - (1.96*COUNT_glm_se[X]))
 COUNT_glm_upperCI[X] <- exp(COUNT.mod$coefficients[2,1] + (1.96*COUNT_glm_se[X])) }
 
+## ==== Genes covered
+NGENE_rate[X] <- mean(comrg_cnv$NGENE)
+NGENE_cas_rate[X] <- mean(comrg_cnv$NGENE[comrg_cnv$PHE==2])
+NGENE_con_rate[X] <- mean(comrg_cnv$NGENE[comrg_cnv$PHE==1])
+NGENE_cascon_ratio[X] <- NGENE_cas_rate[X]/NGENE_con_rate[X]
+
+if(sum(comrg_cnv$aff==0)==0 | sum(comrg_cnv$aff==1)==0){
+  NGENE_glm_OR[X] <- NA
+  NGENE_glm_se[X] <- NA
+  NGENE_glm_tval[X] <- NA
+  NGENE_glm_pval[X] <- NA
+  NGENE_glm_lowerCI[X] <- NA
+  NGENE_glm_upperCI[X] <- NA }
+
+if(sum(comrg_cnv$aff==0) > 0 & sum(comrg_cnv$aff==1) > 0){
+
+if (data_set[X]=='combined') { NGENE.lm <- glm(aff ~ NGENE + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg_cnv,family='binomial') }
+if (data_set[X]!='combined') { NGENE.lm <- glm(aff ~ NGENE + SEX + C1 + C2 + C3 + C4 + C5,data=comrg_cnv,family='binomial') }
+
+NGENE.mod <- summary(NGENE.lm)
+NGENE_glm_OR[X] <- exp(NGENE.mod$coefficients[2,1])    
+NGENE_glm_se[X] <- NGENE.mod$coefficients[2,2]
+NGENE_glm_tval[X] <- NGENE.mod$coefficients[2,3]
+NGENE_glm_pval[X] <- NGENE.mod$coefficients[2,4]
+NGENE_glm_lowerCI[X] <- exp(NGENE.mod$coefficients[2,1] - (1.96*NGENE_glm_se[X]))
+NGENE_glm_upperCI[X] <- exp(NGENE.mod$coefficients[2,1] + (1.96*NGENE_glm_se[X])) }
 
 ## ==== CNV Count
 NSEG_rate[X] <- mean(comrg$NSEG)
@@ -260,8 +303,8 @@ NSEG_cas_rate[X] <- mean(comrg$NSEG[comrg$PHE==2])
 NSEG_con_rate[X] <- mean(comrg$NSEG[comrg$PHE==1])
 NSEG_cascon_ratio[X] <- NSEG_cas_rate[X]/NSEG_con_rate[X]
 
-if (data_set[X]=='SC_ASIA') { NSEG.lm <- glm(aff ~ NSEG + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg,family='binomial') }
-if (data_set[X]!='SC_ASIA') { NSEG.lm <- glm(aff ~ NSEG + SEX + C1 + C2 + C3 + C4 + C5,data=comrg,family='binomial') }
+if (data_set[X]=='combined') { NSEG.lm <- glm(aff ~ NSEG + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg,family='binomial') }
+if (data_set[X]!='combined') { NSEG.lm <- glm(aff ~ NSEG + SEX + C1 + C2 + C3 + C4 + C5,data=comrg,family='binomial') }
 
 NSEG.mod <- summary(NSEG.lm)
 if(nrow(NSEG.mod$coefficients)==1){
@@ -278,6 +321,145 @@ NSEG_glm_tval[X] <- NSEG.mod$coefficients[2,3]
 NSEG_glm_pval[X] <- NSEG.mod$coefficients[2,4]
 NSEG_glm_lowerCI[X] <- exp(NSEG.mod$coefficients[2,1] - (1.96*NSEG_glm_se[X]))
 NSEG_glm_upperCI[X] <- exp(NSEG.mod$coefficients[2,1] + (1.96*NSEG_glm_se[X])) }
+
+
+## ==== overall KB burden
+KB_rate[X] <- mean(comrg_cnv$KB)
+KB_cas_rate[X] <- mean(comrg_cnv$KB[comrg_cnv$PHE==2])
+KB_con_rate[X] <- mean(comrg_cnv$KB[comrg_cnv$PHE==1])
+KB_cascon_ratio[X] <- KB_cas_rate[X]/KB_con_rate[X]
+
+if(sum(comrg_cnv$aff==1)==0 | sum(comrg_cnv$aff==1)==0){
+  KB_glm_OR[X] <- NA
+  KB_glm_se[X] <- NA
+  KB_glm_tval[X] <- NA
+  KB_glm_pval[X] <- NA
+  KB_glm_lowerCI[X] <- NA
+  KB_glm_upperCI[X] <- NA }
+
+if(sum(comrg_cnv$aff==1) > 0 & sum(comrg_cnv$aff==1) > 0){
+
+if (data_set[X]=='combined') { KB.lm <- glm(aff ~ KB + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg_cnv,family='binomial') }
+if (data_set[X]!='combined') { KB.lm <- glm(aff ~ KB + SEX + C1 + C2 + C3 + C4 + C5,data=comrg_cnv,family='binomial') }
+
+KB.mod <- summary(KB.lm)
+KB_glm_OR[X] <- exp(KB.mod$coefficients[2,1])    
+KB_glm_se[X] <- KB.mod$coefficients[2,2]
+KB_glm_tval[X] <- KB.mod$coefficients[2,3]
+KB_glm_pval[X] <- KB.mod$coefficients[2,4]
+KB_glm_lowerCI[X] <- exp(KB.mod$coefficients[2,1] - (1.96*KB_glm_se[X]))
+KB_glm_upperCI[X] <- exp(KB.mod$coefficients[2,1] + (1.96*KB_glm_se[X])) }
+
+
+## ==== GENIC CNV Count
+NSEG_GENIC_rate[X] <- mean(comrg$GENIC_CNV_COUNT)
+NSEG_GENIC_cas_rate[X] <- mean(comrg$GENIC_CNV_COUNT[comrg$PHE==2])
+NSEG_GENIC_con_rate[X] <- mean(comrg$GENIC_CNV_COUNT[comrg$PHE==1])
+NSEG_GENIC_cascon_ratio[X] <- NSEG_GENIC_cas_rate[X]/NSEG_GENIC_con_rate[X]
+
+if (data_set[X]=='combined') { NSEG_GENIC.lm <- glm(aff ~ GENIC_CNV_COUNT + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg,family='binomial') }
+if (data_set[X]!='combined') { NSEG_GENIC.lm <- glm(aff ~ GENIC_CNV_COUNT + SEX + C1 + C2 + C3 + C4 + C5,data=comrg,family='binomial') }
+
+NSEG_GENIC.mod <- summary(NSEG_GENIC.lm)
+if(nrow(NSEG_GENIC.mod$coefficients)==1){
+  NSEG_GENIC_glm_OR[X] <- NA
+  NSEG_GENIC_glm_se[X] <- NA
+  NSEG_GENIC_glm_tval[X] <- NA
+  NSEG_GENIC_glm_pval[X] <- NA
+  NSEG_GENIC_glm_lowerCI[X] <- NA
+  NSEG_GENIC_glm_upperCI[X] <- NA }
+if(nrow(NSEG_GENIC.mod$coefficients) > 1){
+NSEG_GENIC_glm_OR[X] <- exp(NSEG_GENIC.mod$coefficients[2,1])    
+NSEG_GENIC_glm_se[X] <- NSEG_GENIC.mod$coefficients[2,2]
+NSEG_GENIC_glm_tval[X] <- NSEG_GENIC.mod$coefficients[2,3]
+NSEG_GENIC_glm_pval[X] <- NSEG_GENIC.mod$coefficients[2,4]
+NSEG_GENIC_glm_lowerCI[X] <- exp(NSEG_GENIC.mod$coefficients[2,1] - (1.96*NSEG_GENIC_glm_se[X]))
+NSEG_GENIC_glm_upperCI[X] <- exp(NSEG_GENIC.mod$coefficients[2,1] + (1.96*NSEG_GENIC_glm_se[X])) }
+
+
+## ==== NONGENIC CNV Count
+NSEG_NONGENIC_rate[X] <- mean(comrg$NONGENIC_CNV_COUNT)
+NSEG_NONGENIC_cas_rate[X] <- mean(comrg$NONGENIC_CNV_COUNT[comrg_nongenic$PHE==2])
+NSEG_NONGENIC_con_rate[X] <- mean(comrg$NONGENIC_CNV_COUNT[comrg_nongenic$PHE==1])
+NSEG_NONGENIC_cascon_ratio[X] <- NSEG_NONGENIC_cas_rate[X]/NSEG_NONGENIC_con_rate[X]
+
+if(sum(comrg$aff==1)==0 | sum(comrg$aff==1)==0){
+  NSEG_NONGENIC_glm_OR[X] <- NA
+  NSEG_NONGENIC_glm_se[X] <- NA
+  NSEG_NONGENIC_glm_tval[X] <- NA
+  NSEG_NONGENIC_glm_pval[X] <- NA
+  NSEG_NONGENIC_glm_lowerCI[X] <- NA
+  NSEG_NONGENIC_glm_upperCI[X] <- NA }
+
+if(sum(comrg$aff==1) > 0 & sum(comrg$aff==1) > 0){
+
+if (data_set[X]=='combined') { NSEG_NONGENIC.lm <- glm(aff ~ NONGENIC_CNV_COUNT + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg,family='binomial') }
+if (data_set[X]!='combined') { NSEG_NONGENIC.lm <- glm(aff ~ NONGENIC_CNV_COUNT + SEX + C1 + C2 + C3 + C4 + C5,data=comrg,family='binomial') }
+
+NSEG_NONGENIC.mod <- summary(NSEG_NONGENIC.lm)
+NSEG_NONGENIC_glm_OR[X] <- exp(NSEG_NONGENIC.mod$coefficients[2,1])    
+NSEG_NONGENIC_glm_se[X] <- NSEG_NONGENIC.mod$coefficients[2,2]
+NSEG_NONGENIC_glm_tval[X] <- NSEG_NONGENIC.mod$coefficients[2,3]
+NSEG_NONGENIC_glm_pval[X] <- NSEG_NONGENIC.mod$coefficients[2,4]
+NSEG_NONGENIC_glm_lowerCI[X] <- exp(NSEG_NONGENIC.mod$coefficients[2,1] - 1.96*(NSEG_NONGENIC_glm_se[X]))
+NSEG_NONGENIC_glm_upperCI[X] <- exp(NSEG_NONGENIC.mod$coefficients[2,1] + 1.96*(NSEG_NONGENIC_glm_se[X])) }
+
+  
+## ==== NONGENIC KB burden
+KB_NONGENIC_rate[X] <- mean(comrg_nongenic$NONGENIC_KB)
+KB_NONGENIC_cas_rate[X] <- mean(comrg_nongenic$NONGENIC_KB[comrg_nongenic$PHE==2])
+KB_NONGENIC_con_rate[X] <- mean(comrg_nongenic$NONGENIC_KB[comrg_nongenic$PHE==1])
+KB_NONGENIC_cascon_ratio[X] <- KB_NONGENIC_cas_rate[X]/KB_NONGENIC_con_rate[X]
+
+if(sum(comrg_nongenic$aff==1)==0 | sum(comrg_genic$aff==1)==0){
+  KB_NONGENIC_glm_OR[X] <- NA
+  KB_NONGENIC_glm_se[X] <- NA
+  KB_NONGENIC_glm_tval[X] <- NA
+  KB_NONGENIC_glm_pval[X] <- NA
+  KB_NONGENIC_glm_lowerCI[X] <- NA
+  KB_NONGENIC_glm_upperCI[X] <- NA }
+
+
+if(sum(comrg_nongenic$aff==1) > 0 & sum(comrg_nongenic$aff==1) > 0){
+
+if (data_set[X]=='combined') { KB_NONGENIC.lm <- glm(aff ~ NONGENIC_KB + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg_nongenic,family='binomial') }
+if (data_set[X]!='combined') { KB_NONGENIC.lm <- glm(aff ~ NONGENIC_KB + SEX + C1 + C2 + C3 + C4 + C5,data=comrg_nongenic,family='binomial') }
+
+KB_NONGENIC.mod <- summary(KB_NONGENIC.lm)
+KB_NONGENIC_glm_OR[X] <- exp(KB_NONGENIC.mod$coefficients[2,1])    
+KB_NONGENIC_glm_se[X] <- KB_NONGENIC.mod$coefficients[2,2]
+KB_NONGENIC_glm_tval[X] <- KB_NONGENIC.mod$coefficients[2,3]
+KB_NONGENIC_glm_pval[X] <- KB_NONGENIC.mod$coefficients[2,4]
+KB_NONGENIC_glm_lowerCI[X] <- exp(KB_NONGENIC.mod$coefficients[2,1] - (1.96*KB_NONGENIC_glm_se[X]))
+KB_NONGENIC_glm_upperCI[X] <- exp(KB_NONGENIC.mod$coefficients[2,1] + (1.96*KB_NONGENIC_glm_se[X])) }
+
+
+## ==== GENIC KB burden
+KB_GENIC_rate[X] <- mean(comrg_genic$GENIC_KB)
+KB_GENIC_cas_rate[X] <- mean(comrg_genic$GENIC_KB[comrg_genic$PHE==2])
+KB_GENIC_con_rate[X] <- mean(comrg_genic$GENIC_KB[comrg_genic$PHE==1])
+KB_GENIC_cascon_ratio[X] <- KB_GENIC_cas_rate[X]/KB_GENIC_con_rate[X]
+
+if(sum(comrg_genic$aff==1)==0 | sum(comrg_genic$aff==1)==0){
+  KB_GENIC_glm_OR[X] <- NA
+  KB_GENIC_glm_se[X] <- NA
+  KB_GENIC_glm_tval[X] <- NA
+  KB_GENIC_glm_pval[X] <- NA
+  KB_GENIC_glm_lowerCI[X] <- NA
+  KB_GENIC_glm_upperCI[X] <- NA }
+
+if(sum(comrg_genic$aff==1) > 0 & sum(comrg_genic$aff==1) > 0){
+
+if (data_set[X]=='combined') { KB_GENIC.lm <- glm(aff ~ GENIC_KB + SEX + CNV_platform + C1 + C2 + C3 + C4 + C5,data=comrg_genic,family='binomial') }
+if (data_set[X]!='combined') { KB_GENIC.lm <- glm(aff ~ GENIC_KB + SEX + C1 + C2 + C3 + C4 + C5,data=comrg_genic,family='binomial') }
+
+KB_GENIC.mod <- summary(KB_GENIC.lm)
+KB_GENIC_glm_OR[X] <- exp(KB_GENIC.mod$coefficients[2,1])    
+KB_GENIC_glm_se[X] <- KB_GENIC.mod$coefficients[2,2] 
+KB_GENIC_glm_tval[X] <- KB_GENIC.mod$coefficients[2,3]
+KB_GENIC_glm_pval[X] <- KB_GENIC.mod$coefficients[2,4]
+KB_GENIC_glm_lowerCI[X] <- exp(KB_GENIC.mod$coefficients[2,1] - (1.96*KB_GENIC_glm_se[X]))
+KB_GENIC_glm_upperCI[X] <- exp(KB_GENIC.mod$coefficients[2,1] + (1.96*KB_GENIC_glm_se[X])) }
 
 
 
@@ -304,11 +486,59 @@ tmp_data[[X]] <- cbind.data.frame(data_set=data_set[X],
                               NSEG_glm_tval=NSEG_glm_tval[X],
                               NSEG_glm_pval=NSEG_glm_pval[X],
                               NSEG_glm_lowerCI=NSEG_glm_lowerCI[X],
-                              NSEG_glm_upperCI=NSEG_glm_upperCI[X])
+                              NSEG_glm_upperCI=NSEG_glm_upperCI[X],
+                              NGENE_con_rate=NGENE_con_rate[X],
+			      NGENE_cas_rate=NGENE_cas_rate[X],
+                              NGENE_glm_OR=NGENE_glm_OR[X],
+                              NGENE_glm_se=NGENE_glm_se[X],
+                              NGENE_glm_tval=NGENE_glm_tval[X],
+                              NGENE_glm_pval=NGENE_glm_pval[X],
+                              NGENE_glm_lowerCI=NGENE_glm_lowerCI[X],
+                              NGENE_glm_upperCI=NGENE_glm_upperCI[X],
+			      KB_con_rate=KB_con_rate[X],
+			      KB_cas_rate=KB_cas_rate[X],
+                              KB_glm_OR=KB_glm_OR[X],
+                              KB_glm_se=KB_glm_se[X],
+                              KB_glm_tval=KB_glm_tval[X],
+                              KB_glm_pval=KB_glm_pval[X],
+                              KB_glm_lowerCI=KB_glm_lowerCI[X],
+                              KB_glm_upperCI=KB_glm_upperCI[X],
+			      KB_GENIC_con_rate=KB_GENIC_con_rate[X],
+			      KB_GENIC_cas_rate=KB_GENIC_cas_rate[X],
+                              KB_GENIC_glm_OR=KB_GENIC_glm_OR[X],
+                              KB_GENIC_glm_se=KB_GENIC_glm_se[X],
+                              KB_GENIC_glm_tval=KB_GENIC_glm_tval[X],
+                              KB_GENIC_glm_pval=KB_GENIC_glm_pval[X],
+                              KB_GENIC_glm_lowerCI=KB_GENIC_glm_lowerCI[X],
+                              KB_GENIC_glm_upperCI=KB_GENIC_glm_upperCI[X],
+			      KB_NONGENIC_con_rate=KB_NONGENIC_con_rate[X],
+			      KB_NONGENIC_cas_rate=KB_NONGENIC_cas_rate[X],
+                              KB_NONGENIC_glm_OR=KB_NONGENIC_glm_OR[X],
+                              KB_NONGENIC_glm_se=KB_NONGENIC_glm_se[X],
+                              KB_NONGENIC_glm_tval=KB_NONGENIC_glm_tval[X],
+                              KB_NONGENIC_glm_pval=KB_NONGENIC_glm_pval[X],
+                              KB_NONGENIC_glm_lowerCI=KB_NONGENIC_glm_lowerCI[X],
+                              KB_NONGENIC_glm_upperCI=KB_NONGENIC_glm_upperCI[X],
+			      NSEG_NONGENIC_con_rate=NSEG_NONGENIC_con_rate[X],
+			      NSEG_NONGENIC_cas_rate=NSEG_NONGENIC_cas_rate[X],
+                              NSEG_NONGENIC_glm_OR=NSEG_NONGENIC_glm_OR[X],
+                              NSEG_NONGENIC_glm_se=NSEG_NONGENIC_glm_se[X],
+                              NSEG_NONGENIC_glm_tval=NSEG_NONGENIC_glm_tval[X],
+                              NSEG_NONGENIC_glm_pval=NSEG_NONGENIC_glm_pval[X],
+                              NSEG_NONGENIC_glm_lowerCI=NSEG_NONGENIC_glm_lowerCI[X],
+                              NSEG_NONGENIC_glm_upperCI=NSEG_NONGENIC_glm_upperCI[X],
+			      NSEG_GENIC_con_rate=NSEG_GENIC_con_rate[X],
+			      NSEG_GENIC_cas_rate=NSEG_GENIC_cas_rate[X],
+                              NSEG_GENIC_glm_OR=NSEG_GENIC_glm_OR[X],
+                              NSEG_GENIC_glm_se=NSEG_GENIC_glm_se[X],
+                              NSEG_GENIC_glm_tval=NSEG_GENIC_glm_tval[X],
+                              NSEG_GENIC_glm_pval=NSEG_GENIC_glm_pval[X],
+                              NSEG_GENIC_glm_lowerCI=NSEG_GENIC_glm_lowerCI[X],
+                              NSEG_GENIC_glm_upperCI=NSEG_GENIC_glm_upperCI[X])
 
 ## write to file
 write.table(tmp_data[[X]],paste(sep='',wdir,'/',output,data_set[X],region_set[X],CNV_type[X],CNV_freq[X],CNV_size[X],'.burden'),col=T,row=F,quo=F,sep='\t')
-
+system('rm -r burden_loop')
 }
 }
 }
