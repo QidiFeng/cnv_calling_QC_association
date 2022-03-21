@@ -113,6 +113,8 @@ close OUT_IPN_GENDER;
 	print CONF "OUTDIR=$ipn_out\n";
 	print CONF "PROBEFILE=$ipn_dataaux/probe.txt\n";
 	print CONF "TEMPDIR=$ipn_out/\n";
+	print CONF "DATADIR=$ipn_out/\n";
+	print CONF "CALLDIR=$ipn_out/\n";
 	print CONF "DOLOG=TRUE\nDOCLEANUP=TRUE\n";
 	print CONF "NOQSUB=YES\n";
 	}

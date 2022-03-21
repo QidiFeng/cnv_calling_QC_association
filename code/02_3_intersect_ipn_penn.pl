@@ -25,6 +25,11 @@ while(<PEN>){
 	next if $. == 1;
 	chomp;
 	my ($fid, $iid, $chr, $start, $end, $type) = (split)[0, 1, 2, 3, 4, 5];
+	if($type == 0){
+		$type=1;
+	}elsif($type == 4){
+		$type=3;
+	}
 	next unless (($type eq '1')|($type eq '3'));
 	my ($cohort, $sample) = split /\*/, $fid;
 	my ($bn1_bn2) = intersect_func(\%ipn, $cohort, $sample, $chr, $start, $end, $type);

@@ -537,7 +537,6 @@ tmp_data[[X]] <- cbind.data.frame(data_set=data_set[X],
                               NSEG_GENIC_glm_upperCI=NSEG_GENIC_glm_upperCI[X])
 
 ## write to file
-write.table(tmp_data[[X]],paste(sep='',wdir,'/',output,data_set[X],region_set[X],CNV_type[X],CNV_freq[X],CNV_size[X],'.burden'),col=T,row=F,quo=F,sep='\t')
 system('rm -r burden_loop')
 }
 }
