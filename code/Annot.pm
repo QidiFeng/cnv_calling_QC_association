@@ -22,7 +22,7 @@ sub anneal_func {
 						my $total_length = $j-$start;
 						my $gap = $i-$end;
 						my $gap_prop = $gap/$total_length;
-						if($gap_prop<0.2){
+						if($gap_prop<0.3){
 							$start=$start;
 							$end=$j;
 						}
