@@ -97,7 +97,7 @@ close OUT_IPN_SAMPLE;
 close OUT_IPN_GENDER;
 
 ##split ipn samplelist if sample number is >300;
-`split -l 300 $ipn_dataaux/samplelist.txt $ipn_dataaux/sublist`;
+`split -l 200 $ipn_dataaux/samplelist.txt $ipn_dataaux/sublist`;
 
 ##produce ipn parameter file;
 	my @batchs = `ls $ipn_dataaux/sublist*`;
